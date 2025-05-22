@@ -6,6 +6,13 @@ require_once "VistaApi.php";
  */
 class VistaJson extends VistaApi
 {
+    const ESTADO_URL_INCORRECTA = 1;
+    const ESTADO_CREACION_EXITOSA = 2;
+    const ESTADO_CREACION_FALLIDA = 3;
+    const ESTADO_FALLA_DESCONOCIDO = 4;
+    const ESTADO_ERROR_BD = 5;
+    const ESTADO_PARAMETROS_INCORRECTOS = 7;
+
     public function __construct($estado = 400)
     {
         $this->estado = $estado;
@@ -17,9 +24,10 @@ class VistaJson extends VistaApi
      */
     public function imprimir($cuerpo)
     {
-        if ($this->estado) {
-            http_response_code($this->estado);
-        }
+        // if ($this->estado) {
+        //     http_response_code($this->estado == 2 ? 200 : 404);
+        // }
+        http_response_code(($cuerpo["estado"]==2)?200:403);
         header('Content-Type: application/json; charset=utf8');
         echo json_encode($cuerpo, JSON_PRETTY_PRINT);
         exit;

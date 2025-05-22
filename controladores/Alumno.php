@@ -27,7 +27,7 @@ class Alumno
         if ($peticion[0] == 'registro') {
             return self::registrarAlumno();
         } else if ($peticion[0] == 'login') {
-            // return self::loguearAlumno();
+            return self::loguearAlumno();
         } else {
             throw new ExcepcionApi(self::ESTADO_URL_INCORRECTA, "Url mal formada", 400);
         }
@@ -69,14 +69,14 @@ class Alumno
             $pdo = ConexionBD::obtenerInstancia()->obtenerBD();
 
             //Sentencia INSERT
-            $comando = "INSERT INTO " . self::NOMBRE_TABLA . " ( " . 
-            self::NOMBRE_COMPLETO . "," . 
-            self::NUMERO_CONTROL . "," . 
-            self::CONTRASENA . "," . 
-            self::CLAVE_API . "," . 
-            self::CARRERA_ID . "," . 
-            self::SEMESTRE . "," .
-            " VALUES(?,?,?,?,?,?)";
+            $comando = "INSERT INTO " . self::NOMBRE_TABLA . " (" .
+                self::NOMBRE_COMPLETO . "," .
+                self::NUMERO_CONTROL . "," .
+                self::CONTRASENA . "," .
+                self::CLAVE_API . "," .
+                self::CARRERA_ID . "," .
+                self::SEMESTRE . ")" .
+                " VALUES(?,?,?,?,?,?)";
 
             $sentencia = $pdo->prepare($comando);
 
@@ -102,7 +102,7 @@ class Alumno
 
     private static function encriptarContrasena($contrasenaPlana)
     {
-        if ($contrasenaPlana) 
+        if ($contrasenaPlana)
             return password_hash($contrasenaPlana, PASSWORD_DEFAULT);
         else
             return null;
@@ -110,6 +110,87 @@ class Alumno
     private static function generarClaveApi()
     {
         return md5(microtime() . rand());
+    }
+
+    private static function loguearAlumno()
+    {
+        $respuesta = array();
+        $body = file_get_contents('php://input');
+        $alumno = json_decode($body);
+
+        $numeroControl = $alumno->numeroControl;
+        $contrasena = $alumno->contrasena;
+
+        if (self::autentificarAlumno($numeroControl, $contrasena)) {
+            $alumnoBD = self::obtenerAlumnoPorNumeroControl($numeroControl);
+
+            if ($alumnoBD != NULL) {
+                http_response_code(200);
+                $respuesta["nombreCompleto"] = $alumnoBD["nombreCompleto"];
+                $respuesta["numeroControl"] = $alumnoBD["numeroControl"];
+                $respuesta["claveApi"] = $alumnoBD["claveApi"];
+                $respuesta["carreraId"] = $alumnoBD["carreraId"];
+                $respuesta["semestre"] = $alumnoBD["semestre"];
+                return ["estado" => 2, "alumno" => $respuesta];
+            } else {
+                throw new ExcepcionApi(self::ESTADO_FALLA_DESCONOCIDO, "Ha ocurrido un error");
+            }
+        } else {
+            throw new ExcepcionApi(
+                self::ESTADO_PARAMETROS_INCORRECTOS,
+                ("Numero Control o contraseña invalidos")
+            );
+        }
+    }
+
+    private static function autentificarAlumno($numeroControl, $contrasena)
+    {
+        $comando = "SELECT contrasena FROM " . self::NOMBRE_TABLA .
+            " WHERE " . self::NUMERO_CONTROL . "=?";
+
+        try {
+            $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
+            $sentencia->bindParam(1,$numeroControl);
+            $sentencia->execute();
+
+            if ($sentencia) {
+                $resultado = $sentencia->fetch();
+
+                if (self::validarContrasena($contrasena, $resultado['contrasena'])) {
+                    return true;
+                } else
+                    return false;
+            } else {
+                return false;
+            }
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
+    }
+
+    private static function validarContrasena($contrasenaPlana, $contrasenaHash)
+    {
+        return password_verify($contrasenaPlana, $contrasenaHash);
+    }
+
+    private static function obtenerAlumnoPorNumeroControl($numeroControl)
+    {
+        $comando = "SELECT " .
+            self::NOMBRE_COMPLETO . "," .
+            self::NUMERO_CONTROL . "," .
+            self::CLAVE_API . "," .
+            self::CARRERA_ID . "," .
+            self::SEMESTRE .
+            " FROM " . self::NOMBRE_TABLA .
+            " WHERE " . self::NUMERO_CONTROL . "=?";
+
+        $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
+        $sentencia->bindParam(1, $numeroControl);
+
+        if ($sentencia->execute())
+            return $sentencia->fetch(PDO::FETCH_ASSOC);
+        else
+            return null;
     }
 }
 ?>
