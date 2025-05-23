@@ -4,6 +4,10 @@ require_once 'Alumno.php';
 
 class NivelesCarrera
 {
+    //Datos de la tabla "Niveles Carrera"
+    const NOMBRE_TABLA = "nivelescarrera";
+    const NOMBRE = "nombre";
+
     //Constantes de estado para respuestas y errores
     const ESTADO_URL_INCORRECTA = 1;
     const ESTADO_CREACION_EXITOSA = 2;
@@ -27,28 +31,48 @@ class NivelesCarrera
     public static function post()
     {
         $idAlumno = Alumno::autorizar();
-        $body = file_get_contents('php://input');
-        $nivelCarrera = json_decode($body);
 
-        $idNivelCarrera = NivelesCarrera::crearNivelesCarrera($idAlumno, $nivelCarrera);
+        if (isset($idAlumno)) {
+            $body = file_get_contents('php://input');
+            $nivelCarrera = json_decode($body);
 
-        http_response_code(201);
-        return [
-            "estado" => self::ESTADO_CREACION_EXITOSA,
-            "mensaje" => "Nivel Carrera -> Creado con exito!",
-            "Nivel Carrera" => $idNivelCarrera
-        ];
+            if (self::crearNivelesCarrera($nivelCarrera)) {
+                return [
+                    "estado" => self::ESTADO_CREACION_EXITOSA,
+                    "mensaje" => "Nivel carrera creado correctamente"
+                ];
+            } else {
+                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al crear nivel carrera");
+            }
+        } else {
+            throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave Api");
+        }
     }
 
-    private static function crearNivelesCarrera($idAlumno, $nivelCarrera)
+    private static function crearNivelesCarrera($datosNivelCarrera)
     {
-        if (isset($idAlumno, $nivelCarrera)) {
-            return [
-                "IdAlumno" => $idAlumno,
-                "Nivel Carrera" => $nivelCarrera
-            ];
-        }
+        try {
+            if (isset($datosNivelCarrera)) {
+                $nombre = $datosNivelCarrera->nombre;
 
+                $comando = "INSERT INTO " . self::NOMBRE_TABLA . " (" .
+                    self::NOMBRE . ")" .
+                    " VALUES(?)";
+
+                $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
+                $sentencia->bindParam(1, $nombre);
+
+                if ($sentencia->execute()) {
+                    return true;
+                } else {
+                    return false;
+                }
+            } else {
+                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al crear nivel carrera");
+            }
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
     }
 }
 
