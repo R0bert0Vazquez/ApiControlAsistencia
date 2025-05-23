@@ -347,7 +347,7 @@ class Alumno
             } else {
                 throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener los Alumnos");
             }
-        } catch (ExcepcionApi $e) {
+        } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage(), 500);
         }
     }
