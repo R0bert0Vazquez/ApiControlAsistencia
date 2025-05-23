@@ -1,4 +1,7 @@
 <?php
+require_once './controladores/Alumno.php';
+require_once './controladores/NivelesCarrera.php';
+
 require_once './vistas/VistaJson.php';
 require_once './vistas/VistaXML.php';
 require_once './utilidades/ExcepcionApi.php';
@@ -44,7 +47,8 @@ if (isset($_GET['PATH_INFO'])) {
     // print_r($parameters);
 
     $recursos_existentes = array(
-        'alumno'
+        'alumno',
+        'nivelesCarrera'
     );
 
     // Comprobar si existe el recurso
