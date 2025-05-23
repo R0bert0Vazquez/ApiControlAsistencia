@@ -4,7 +4,7 @@ require_once "./datos/ConexionBD.php";
 class Alumno
 {
     //Datos de la tabla "alumnos"
-    const NOMBRE_TABLA = "alumnos";
+    const NOMBRE_TABLA = "Alumnos";
     const ID = "id";
     const NOMBRE_COMPLETO = "nombreCompleto";
     const NUMERO_CONTROL = "numeroControl";

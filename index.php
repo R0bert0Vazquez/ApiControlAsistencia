@@ -48,7 +48,8 @@ if (isset($_GET['PATH_INFO'])) {
 
     $recursos_existentes = array(
         'alumno',
-        'nivelesCarrera'
+        'nivelesCarrera',
+        'horario'
     );
 
     // Comprobar si existe el recurso
@@ -87,6 +88,7 @@ switch ($request_method) {
     case 'delete':
         if (method_exists($nombre_clase, $request_method)) {
             $respuesta = call_user_func(array($nombre_clase, $request_method), $parameters);
+            $vista->estado = $respuesta?200:500;
             $vista->imprimir($respuesta);
             break;
         }

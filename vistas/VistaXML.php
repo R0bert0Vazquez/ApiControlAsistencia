@@ -12,6 +12,10 @@ class VistaXML extends VistaApi
      * Imprime el cuerpo de la respuesta y setea el código de respuesta
      * @param mixed $cuerpo de la respuesta a enviar
      */
+    public function __construct($estado = 400)
+    {
+        $this->estado = $estado;
+    }
     public function imprimir($cuerpo)
     {
         if ($this->estado) {
