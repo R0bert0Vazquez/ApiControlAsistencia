@@ -57,7 +57,7 @@ class horario
             }else{
                 throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, ("Parametro no Encontrado".$params[0]));
             }
-        }catch(PDOExeption $e){
+        }catch(PDOException $e){
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage(), 500);
         }
     }
@@ -72,7 +72,7 @@ class horario
                 $sentencia2 = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($qry);
             }
             return $sentencia2->execute()?$sentencia2->fetchAll(PDO::FETCH_ASSOC):null;
-        } catch(PDOExeption $e){
+        } catch(PDOException $e){
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage(), 500);
         }
     }
