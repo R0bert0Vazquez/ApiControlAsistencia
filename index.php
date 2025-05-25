@@ -1,6 +1,7 @@
 <?php
 require_once './controladores/Alumno.php';
 require_once './controladores/NivelesCarrera.php';
+require_once './controladores/Horario.php';
 
 require_once './vistas/VistaJson.php';
 require_once './vistas/VistaXML.php';
