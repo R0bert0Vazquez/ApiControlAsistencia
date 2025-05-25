@@ -111,6 +111,113 @@ class Asistencia{
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage().$qry, 500);
         }
     }
+    public static function post($peticion = null) {
+        $idAlumno = Alumno::autorizar();
+        if($idAlumno){
+            if($peticion){
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No requiere", 400);
+            }else{
+                $body = json_decode(file_get_contents('php://input'));
+                return ['estado'=>self::crearAsistencia($idAlumno,$body),'mensaje'=>"Horario Ingresado con Exito"];
+            }
+        }
+
+        
+    }
+
+    private static function crearAsistencia($idAlumno, $body) {
+        try {
+            $pdo = ConexionBD::obtenerInstancia()->obtenerBD();
+
+            //Sentencia INSERT
+            $comando  = "INSERT INTO " . self::NOMBRE_TABLA . " (" .
+                self::FECHA. "," .
+                self::HORARIO . "," .
+                self::ALUMNO_ID . "," .
+                self::ID_TIPO_INCIDENCIA . ")" .
+                " VALUES(?,?,?,?);";
+
+            $sentencia = $pdo->prepare($comando);
+
+            $sentencia->bindParam(1, $body->fecha);
+            $sentencia->bindParam(2, $body->hora);
+            $sentencia->bindParam(3, $idAlumno);
+            $sentencia->bindParam(4, $body->tipoIncidenciaId);
+
+            $resultado = $sentencia->execute();
+
+            if ($resultado) {
+                return self::ESTADO_CREACION_EXITOSA;
+            } else {
+                return self::ESTADO_CREACION_FALLIDA;
+            }
+
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
+    }
+    public static function put($params = null){
+        $body = json_decode(file_get_contents("php://input"));
+        $idUser = Alumno::autorizar();
+        if(!$body){
+            throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Argumentos Faltantes");
+        }else{
+            return self::update($idUser,$body);
+        }
+
+        
+    }
+
+    private static function update($idUser,$body){
+        try {
+            if($idUser){
+                $db = ConexionBD::obtenerInstancia()->obtenerBD();
+                $qry = 'UPDATE '.self::NOMBRE_TABLA.' SET '.
+                self::HORARIO.' = ?'.
+                ' WHERE '.self::ALUMNO_ID.' ='.$idUser . ' AND '.self::FECHA.' =?';
+
+                $sentencia = $db->prepare($qry);
+                $sentencia->bindParam(1,$body->newHora);
+                $sentencia->bindParam(2,$body->fecha);
+                
+
+                return $sentencia->execute()?['estado'=>self::ESTADO_CREACION_EXITOSA,'mensaje'=>"Realizado Correctamente"]:['estado'=>self::ESTADO_ERROR_BD,'mensaje'=>"Erro Intentelo de Nuevo"];
+            }else 
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Id no Encontrado");
+
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
+    }
+    public static function delete($params = null){
+        $idUser = Alumno::autorizar();
+        if(!$params){
+            throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Parametros Faltantes");
+        }else{
+            if(count($params)>= 2)
+                return ['estado'=>self::ESTADO_PARAMETROS_INCORRECTOS,'mensaje'=>"Faltan parametros para la peticion".count($params)." numero Parametro"];
+            else
+                return self::deleteBD($idUser,$params);
+        }
+    }
+
+    private static function deleteBD($idUser,$params){
+        try {
+                $db = ConexionBD::obtenerInstancia()->obtenerBD();
+                $qry = 'DELETE FROM '.self::NOMBRE_TABLA.
+                ' WHERE '.self::ALUMNO_ID.' = '.$idUser. ' AND '.self::FECHA.' = ?';
+
+                $sentencia = $db->prepare($qry);
+                $sentencia->bindParam(1,$params[0]);
+
+                return $sentencia->execute()?['estado'=>self::ESTADO_CREACION_EXITOSA,'mensaje'=>"Realizado Correctamente"]:['estado'=>self::ESTADO_ERROR_BD,'mensaje'=>"Error Intentelo de Nuevo"];
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
+    }
+
+
+
 
 }
 
