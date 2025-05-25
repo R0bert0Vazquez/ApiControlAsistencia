@@ -1,6 +1,9 @@
 <?php
 require_once './controladores/Alumno.php';
 require_once './controladores/NivelesCarrera.php';
+require_once './controladores/Horario.php';
+require_once './controladores/Asistencia.php';
+require_once './controladores/TipoIncidencia.php';
 
 require_once './vistas/VistaJson.php';
 require_once './vistas/VistaXML.php';
@@ -49,7 +52,9 @@ if (isset($_GET['PATH_INFO'])) {
     $recursos_existentes = array(
         'alumno',
         'nivelesCarrera',
-        'horario'
+        'horario', 
+        'asistencia',
+        'tipoIncidencia'
     );
 
     // Comprobar si existe el recurso
