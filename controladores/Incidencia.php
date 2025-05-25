@@ -2,12 +2,16 @@
 require_once './datos/ConexionBD.php';
 require_once 'Alumno.php';
 
-class NivelesCarrera
+class Incidencia
 {
-    //Datos de la tabla "Niveles Carrera"
-    const NOMBRE_TABLA = "nivelescarrera";
+    //Datos de la tabla "Incidencia"
+    const NOMBRE_TABLA = "incidencias";
     const ID = "id";
-    const NOMBRE = "nombre";
+    const FECHA = "fecha";
+    const ALUMNO_ID = "alumnoId";
+    const TIPO_INCIDENCIA_ID = "tipoIncidenciaId";
+    const HORA_ENTRADA = "horaEntrada";
+    const HORA_SALIDA = "horaSalida";
 
     //Constantes de estado para respuestas y errores
     const ESTADO_URL_INCORRECTA = 1;
@@ -52,14 +56,20 @@ class NivelesCarrera
             $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
 
             if ($sentencia->execute()) {
+                $resultado = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+
+                if (empty($resultado)) {
+                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existen incidencias");
+                }
+
                 http_response_code(200);
                 return
                     [
                         "estado" => self::ESTADO_EXISTENCIA_RECURSO,
-                        "niveles carrera" => $sentencia->fetchAll(PDO::FETCH_ASSOC)
+                        "incidencias" => $resultado
                     ];
             } else {
-                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener los niveles carrera");
+                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener las incidencias");
             }
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
@@ -77,19 +87,18 @@ class NivelesCarrera
                 $resultado = $sentencia->fetchAll(PDO::FETCH_ASSOC);
 
                 if (empty($resultado)) {
-                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe nivel carrera con el ID especidicado");
+                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe la incidencia con el ID especidicado");
                 }
 
                 http_response_code(200);
                 return
                     [
                         "estado" => self::ESTADO_EXISTENCIA_RECURSO,
-                        "nivel carrera" => $resultado
+                        "incidencia" => $resultado
                     ];
             } else {
-                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener el Alumno");
+                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener la incidencia");
             }
-
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage(), 500);
         }
@@ -109,16 +118,17 @@ class NivelesCarrera
                 $resultado = $sentencia->fetchAll(PDO::FETCH_ASSOC);
 
                 if (empty($resultado)) {
-                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No exiten niveles carrera en el rango de IDs especificados");
+                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No exiten incidencias en el rango de IDs especificados");
                 }
 
                 http_response_code(200);
-                return [
-                    "estado" => self::ESTADO_EXISTENCIA_RECURSO,
-                    "niveles carrera" => $resultado
-                ];
+                return
+                    [
+                        "estado" => self::ESTADO_EXISTENCIA_RECURSO,
+                        "incidencias" => $resultado
+                    ];
             } else {
-                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener niveles carrera");
+                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener incidencias");
             }
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage(), 500);
@@ -133,41 +143,53 @@ class NivelesCarrera
         if (!isset($idAlumno)) {
             throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave Api");
         }
-
         if (empty($parameters) || $parameters[0] !== 'registro') {
             throw new ExcepcionApi(self::ESTADO_URL_INCORRECTA, "Url mal formada", 400);
         }
 
         $body = file_get_contents('php://input');
-        $nivelCarrera = json_decode($body);
+        $incidencia = json_decode($body);
 
-        if (!isset($nivelCarrera->nombre) || empty($nivelCarrera->nombre)) {
-            throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "El nombre del nivel carrera es requerido");
+        if (empty($incidencia->fecha) || empty($incidencia->alumnoId) || empty($incidencia->tipoIncidenciaId) /*|| empty($incidencia->horaEntrada) || empty($incidencia->horaSalida)*/) {
+            throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Falta proporcionar un dato que es requerido");
         }
 
-        if (self::crearNivelesCarrera($nivelCarrera)) {
+        if (self::crearIncidencia($incidencia)) {
             http_response_code(200);
-            return [
-                "estado" => self::ESTADO_CREACION_EXITOSA,
-                "mensaje" => "Nivel carrera creado correctamente"
-            ];
+            return
+                [
+                    "estado" => self::ESTADO_CREACION_EXITOSA,
+                    "mensaje" => "Incidencia creado correctamente"
+                ];
         } else {
-            throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al crear nivel carrera");
+            throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al crear incidencia");
         }
     }
 
-    private static function crearNivelesCarrera($datosNivelCarrera)
+    private static function crearIncidencia($datosIncidencia)
     {
         try {
-            if (isset($datosNivelCarrera)) {
-                $nombre = $datosNivelCarrera->nombre;
+            if (isset($datosIncidencia)) {
+                $fecha = $datosIncidencia->fecha;
+                $alumnoId = $datosIncidencia->alumnoId;
+                $tipoIncidenciaId = $datosIncidencia->tipoIncidenciaId;
+                $horaEntrada = $datosIncidencia->horaEntrada;
+                $horaSalida = $datosIncidencia->horaSalida;
 
                 $comando = "INSERT INTO " . self::NOMBRE_TABLA . " (" .
-                    self::NOMBRE . ")" .
-                    " VALUES(?)";
+                    self::FECHA . "," .
+                    self::ALUMNO_ID . "," .
+                    self::TIPO_INCIDENCIA_ID . "," .
+                    self::HORA_ENTRADA . "," .
+                    self::HORA_SALIDA . ") " .
+                    " VALUES(?,?,?,?,?)";
 
                 $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
-                $sentencia->bindParam(1, $nombre);
+                $sentencia->bindParam(1, $fecha, PDO::PARAM_STR);
+                $sentencia->bindParam(2, $alumnoId, PDO::PARAM_INT);
+                $sentencia->bindParam(3, $tipoIncidenciaId, PDO::PARAM_INT);
+                $sentencia->bindParam(4, $horaEntrada, PDO::PARAM_STR);
+                $sentencia->bindParam(5, $horaSalida, PDO::PARAM_STR);
 
                 if ($sentencia->execute()) {
                     return true;
@@ -175,7 +197,7 @@ class NivelesCarrera
                     return false;
                 }
             } else {
-                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al crear nivel carrera");
+                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al crear incidencia");
             }
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
@@ -189,29 +211,29 @@ class NivelesCarrera
 
         if (isset($idAlumno)) {
             if (empty($parameters)) {
-                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Se requiere el ID de nivel carrera a actualizar");
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Se requiere el ID de la incidencia a actualizar", 7);
             }
 
             $id = $parameters[0];
-            if (!self::existeNivelCarrera($id)) {
-                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe un nivel carrera con el ID especificado");
+            if (!self::existenciaIncidencia($id)) {
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe una incidencia con el ID especificado");
             }
 
             $body = file_get_contents('php://input');
-            $nivelCarrera = json_decode($body);
+            $incidencia = json_decode($body);
 
-            if (self::actualizarNivelCarrera($id, $nivelCarrera)) {
+            if (self::actualizarIncidencia($id, $incidencia)) {
                 http_response_code(200);
                 return
-                [
-                    "estado" => self::ESTADO_CREACION_EXITOSA,
-                    "mensaje" => "Nivel carrera actualizado corretamente!"
-                ];
+                    [
+                        "estado" => self::ESTADO_CREACION_EXITOSA,
+                        "mensaje" => "Incidencia actualizada exitosamente!"
+                    ];
             }
         }
     }
 
-    private static function existeNivelCarrera($id)
+    private static function existenciaIncidencia($id)
     {
         try {
             $comando = "SELECT COUNT(*) FROM " . self::NOMBRE_TABLA . " WHERE " . self::ID . "=?";
@@ -224,7 +246,7 @@ class NivelesCarrera
         }
     }
 
-    private static function actualizarNivelCarrera($id, $datosNivelCarrera)
+    private static function actualizarIncidencia($id, $incidencia)
     {
         try {
             $campos = [];
@@ -232,9 +254,29 @@ class NivelesCarrera
             $tipos = [];
 
             // Verificar y agregar cada campo si existe
-            if (isset($datosNivelCarrera->nombre)) {
-                $campos[] = self::NOMBRE . "=?";
-                $valores[] = $datosNivelCarrera->nombre;
+            if (isset($incidencia->fecha)) {
+                $campos[] = self::FECHA . "=?";
+                $valores[] = $incidencia->fecha;
+                $tipos[] = PDO::PARAM_STR;
+            }
+            if (isset($incidencia->alumnoId)) {
+                $campos[] = self::ALUMNO_ID . "=?";
+                $valores[] = $incidencia->alumnoId;
+                $tipos[] = PDO::PARAM_INT;
+            }
+            if (isset($incidencia->tipoIncidenciaId)) {
+                $campos[] = self::TIPO_INCIDENCIA_ID . "=?";
+                $valores[] = $incidencia->tipoIncidenciaId;
+                $tipos[] = PDO::PARAM_INT;
+            }
+            if (isset($incidencia->horaEntrada)) {
+                $campos[] = self::HORA_ENTRADA . "=?";
+                $valores[] = $incidencia->horaEntrada;
+                $tipos[] = PDO::PARAM_STR;
+            }
+            if (isset($incidencia->horaSalida)) {
+                $campos[] = self::HORA_SALIDA . "=?";
+                $valores[] = $incidencia->horaSalida;
                 $tipos[] = PDO::PARAM_STR;
             }
 
@@ -262,36 +304,36 @@ class NivelesCarrera
         }
     }
 
-    //Peticion Delete
+    //Peticiones DELETE
     public static function delete($parameters)
     {
         $idAlumno = Alumno::autorizar();
 
         if (isset($idAlumno)) {
             if (empty($parameters)) {
-                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Se requiere el ID del nivel carrera a eliminar");
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Se requiere el ID de la incidencia a eliminar");
             }
 
             $id = $parameters[0];
-            if (!self::existeNivelCarrera($id)) {
-                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe un nivel carrera con el ID especificado");
+            if (!self::existenciaIncidencia($id)) {
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe una incidencia con el ID especificado");
             }
 
-            if (self::eliminarNivelCarrera($id)) {
+            if (self::eliminarIncidencia($id)) {
                 http_response_code(200);
                 return [
                     "estado" => self::ESTADO_EXISTENCIA_RECURSO,
-                    "mensaje" => "Nivel carrera eliminado correctamente"
+                    "mensaje" => "Incidencia eliminada exitosamente!"
                 ];
             } else {
-                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al eliminar el nivel carrera");
+                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al eliminar la incidencia");
             }
         } else {
             throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave API");
         }
     }
 
-    private static function eliminarNivelCarrera($id)
+    private static function eliminarIncidencia($id)
     {
         try {
             $consulta = "DELETE FROM " . self::NOMBRE_TABLA . " WHERE " . self::ID . "=?";
@@ -304,5 +346,4 @@ class NivelesCarrera
         }
     }
 }
-
 ?>

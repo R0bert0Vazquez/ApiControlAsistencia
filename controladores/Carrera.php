@@ -2,12 +2,13 @@
 require_once './datos/ConexionBD.php';
 require_once 'Alumno.php';
 
-class NivelesCarrera
+class Carrera
 {
-    //Datos de la tabla "Niveles Carrera"
-    const NOMBRE_TABLA = "nivelescarrera";
-    const ID = "id";
+    //Datos de la tabla "Carrera"
+    const NOMBRE_TABLA = "carreras";
+    const CLAVE = "clave";
     const NOMBRE = "nombre";
+    const NIVEL_ID = "nivelId";
 
     //Constantes de estado para respuestas y errores
     const ESTADO_URL_INCORRECTA = 1;
@@ -52,80 +53,87 @@ class NivelesCarrera
             $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
 
             if ($sentencia->execute()) {
+
+                $resultado = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+
+                if (empty($resultado)) {
+                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existen carreras");
+                }
+
                 http_response_code(200);
                 return
                     [
                         "estado" => self::ESTADO_EXISTENCIA_RECURSO,
-                        "niveles carrera" => $sentencia->fetchAll(PDO::FETCH_ASSOC)
+                        "carreras" => $resultado
                     ];
             } else {
-                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener los niveles carrera");
+                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener las carreras");
             }
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
         }
     }
 
-    private static function getId($id)
+    private static function getId($clave)
     {
         try {
-            $comando = "SELECT * FROM " . self::NOMBRE_TABLA . " WHERE " . self::ID . "=?";
+            $comando = "SELECT * FROM " . self::NOMBRE_TABLA . " WHERE " . self::CLAVE . "=?";
             $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
-            $sentencia->bindParam(1, $id, PDO::PARAM_INT);
+            $sentencia->bindParam(1, $clave, PDO::PARAM_INT);
 
             if ($sentencia->execute()) {
                 $resultado = $sentencia->fetchAll(PDO::FETCH_ASSOC);
 
                 if (empty($resultado)) {
-                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe nivel carrera con el ID especidicado");
+                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe la carrera con el ID especidicado");
                 }
 
                 http_response_code(200);
                 return
                     [
                         "estado" => self::ESTADO_EXISTENCIA_RECURSO,
-                        "nivel carrera" => $resultado
+                        "carrera" => $resultado
                     ];
             } else {
-                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener el Alumno");
+                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener la carrera");
             }
-
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage(), 500);
         }
     }
 
-    private static function getMany($idIni, $idFin)
+    private static function getMany($claveIni, $claveFin)
     {
         try {
             $comando = "SELECT * FROM " .
                 self::NOMBRE_TABLA . " WHERE " .
-                self::ID . " BETWEEN ? AND ?";
+                self::CLAVE . " BETWEEN ? AND ?";
             $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
-            $sentencia->bindParam(1, $idIni, PDO::PARAM_INT);
-            $sentencia->bindParam(2, $idFin, PDO::PARAM_INT);
+            $sentencia->bindParam(1, $claveIni, PDO::PARAM_INT);
+            $sentencia->bindParam(2, $claveFin, PDO::PARAM_INT);
 
             if ($sentencia->execute()) {
                 $resultado = $sentencia->fetchAll(PDO::FETCH_ASSOC);
 
                 if (empty($resultado)) {
-                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No exiten niveles carrera en el rango de IDs especificados");
+                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No exiten carreras en el rango de IDs especificados");
                 }
 
                 http_response_code(200);
-                return [
-                    "estado" => self::ESTADO_EXISTENCIA_RECURSO,
-                    "niveles carrera" => $resultado
-                ];
+                return
+                    [
+                        "estado" => self::ESTADO_EXISTENCIA_RECURSO,
+                        "carreras" => $resultado
+                    ];
             } else {
-                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener niveles carrera");
+                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener carreras");
             }
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage(), 500);
         }
     }
 
-    //Peticiones POST
+    //Peticion POST
     public static function post($parameters)
     {
         $idAlumno = Alumno::autorizar();
@@ -139,35 +147,39 @@ class NivelesCarrera
         }
 
         $body = file_get_contents('php://input');
-        $nivelCarrera = json_decode($body);
+        $carrera = json_decode($body);
 
-        if (!isset($nivelCarrera->nombre) || empty($nivelCarrera->nombre)) {
-            throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "El nombre del nivel carrera es requerido");
+        if (empty($carrera->nombre) || empty($carrera->nivelId)) {
+            throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "El nombre y clave de carrera es requerido");
         }
 
-        if (self::crearNivelesCarrera($nivelCarrera)) {
+        if (self::crearCarrera($carrera)) {
             http_response_code(200);
-            return [
-                "estado" => self::ESTADO_CREACION_EXITOSA,
-                "mensaje" => "Nivel carrera creado correctamente"
-            ];
+            return
+                [
+                    "estado" => self::ESTADO_CREACION_EXITOSA,
+                    "mensaje" => "Carrera creado correctamente"
+                ];
         } else {
-            throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al crear nivel carrera");
+            throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al crear carrera");
         }
     }
 
-    private static function crearNivelesCarrera($datosNivelCarrera)
+    private static function crearCarrera($datosCarrera)
     {
         try {
-            if (isset($datosNivelCarrera)) {
-                $nombre = $datosNivelCarrera->nombre;
+            if (isset($datosCarrera)) {
+                $nombre = $datosCarrera->nombre;
+                $nivelId = $datosCarrera->nivelId;
 
                 $comando = "INSERT INTO " . self::NOMBRE_TABLA . " (" .
-                    self::NOMBRE . ")" .
-                    " VALUES(?)";
+                    self::NOMBRE . "," .
+                    self::NIVEL_ID . ")" .
+                    " VALUES(?,?)";
 
                 $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
                 $sentencia->bindParam(1, $nombre);
+                $sentencia->bindParam(2, $nivelId, PDO::PARAM_INT);
 
                 if ($sentencia->execute()) {
                     return true;
@@ -175,48 +187,48 @@ class NivelesCarrera
                     return false;
                 }
             } else {
-                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al crear nivel carrera");
+                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al crear carrera");
             }
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
         }
     }
 
-    //Peticiones PUT
+    //Peticion PUT
     public static function put($parameters)
     {
         $idAlumno = Alumno::autorizar();
 
         if (isset($idAlumno)) {
             if (empty($parameters)) {
-                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Se requiere el ID de nivel carrera a actualizar");
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Se requiere el ID de carrera a actualizar", 7);
             }
 
-            $id = $parameters[0];
-            if (!self::existeNivelCarrera($id)) {
-                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe un nivel carrera con el ID especificado");
+            $clave = $parameters[0];
+            if (!self::existenciaCarrera($clave)) {
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe una carrera con el ID especificado");
             }
 
             $body = file_get_contents('php://input');
-            $nivelCarrera = json_decode($body);
+            $carrera = json_decode($body);
 
-            if (self::actualizarNivelCarrera($id, $nivelCarrera)) {
+            if (self::actualizarCarrera($clave, $carrera)) {
                 http_response_code(200);
                 return
-                [
-                    "estado" => self::ESTADO_CREACION_EXITOSA,
-                    "mensaje" => "Nivel carrera actualizado corretamente!"
-                ];
+                    [
+                        "estado" => self::ESTADO_CREACION_EXITOSA,
+                        "mensaje" => "Carrera actualizada exitosamente!"
+                    ];
             }
         }
     }
 
-    private static function existeNivelCarrera($id)
+    private static function existenciaCarrera($clave)
     {
         try {
-            $comando = "SELECT COUNT(*) FROM " . self::NOMBRE_TABLA . " WHERE " . self::ID . "=?";
+            $comando = "SELECT COUNT(*) FROM " . self::NOMBRE_TABLA . " WHERE " . self::CLAVE . "=?";
             $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
-            $sentencia->bindParam(1, $id, PDO::PARAM_INT);
+            $sentencia->bindParam(1, $clave, PDO::PARAM_INT);
             $sentencia->execute();
             return $sentencia->fetchColumn() > 0;
         } catch (PDOException $e) {
@@ -224,7 +236,7 @@ class NivelesCarrera
         }
     }
 
-    private static function actualizarNivelCarrera($id, $datosNivelCarrera)
+    private static function actualizarCarrera($clave, $carrera)
     {
         try {
             $campos = [];
@@ -232,10 +244,15 @@ class NivelesCarrera
             $tipos = [];
 
             // Verificar y agregar cada campo si existe
-            if (isset($datosNivelCarrera->nombre)) {
+            if (isset($carrera->nombre)) {
                 $campos[] = self::NOMBRE . "=?";
-                $valores[] = $datosNivelCarrera->nombre;
+                $valores[] = $carrera->nombre;
                 $tipos[] = PDO::PARAM_STR;
+            }
+            if (isset($carrera->nivelId)) {
+                $campos[] = self::NIVEL_ID . "=?";
+                $valores[] = $carrera->nivelId;
+                $tipos[] = PDO::PARAM_INT;
             }
 
             if (empty($campos)) {
@@ -243,15 +260,15 @@ class NivelesCarrera
             }
 
             // Construir la consulta SQL
-            $consulta = "UPDATE " . self::NOMBRE_TABLA . " SET " . implode(", ", $campos) . " WHERE " . self::ID . "=?";
+            $consulta = "UPDATE " . self::NOMBRE_TABLA . " SET " . implode(", ", $campos) . " WHERE " . self::CLAVE . "=?";
             $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($consulta);
 
             // Vincular los valores dinámicamente
             foreach ($valores as $i => $valor) {
                 $sentencia->bindParam($i + 1, $valores[$i], $tipos[$i]);
             }
-            // Vincular el ID al último parámetro
-            $sentencia->bindParam(count($valores) + 1, $id, PDO::PARAM_INT);
+            // Vincular la clave al último parámetro
+            $sentencia->bindParam(count($valores) + 1, $clave, PDO::PARAM_INT);
 
             // Ejecutar y verificar si se realizó la actualización
             $sentencia->execute();
@@ -262,41 +279,41 @@ class NivelesCarrera
         }
     }
 
-    //Peticion Delete
+    //Peticiones DELETE
     public static function delete($parameters)
     {
         $idAlumno = Alumno::autorizar();
 
         if (isset($idAlumno)) {
             if (empty($parameters)) {
-                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Se requiere el ID del nivel carrera a eliminar");
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Se requiere el ID de la carrera a eliminar");
             }
 
-            $id = $parameters[0];
-            if (!self::existeNivelCarrera($id)) {
-                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe un nivel carrera con el ID especificado");
+            $clave = $parameters[0];
+            if (!self::existenciaCarrera($clave)) {
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe una carrera con el ID especificado");
             }
 
-            if (self::eliminarNivelCarrera($id)) {
+            if (self::eliminarCarrera($clave)) {
                 http_response_code(200);
                 return [
                     "estado" => self::ESTADO_EXISTENCIA_RECURSO,
-                    "mensaje" => "Nivel carrera eliminado correctamente"
+                    "mensaje" => "Carrera eliminada exitosamente!"
                 ];
             } else {
-                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al eliminar el nivel carrera");
+                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al eliminar la carrera");
             }
         } else {
             throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave API");
         }
     }
 
-    private static function eliminarNivelCarrera($id)
+    private static function eliminarCarrera($clave)
     {
         try {
-            $consulta = "DELETE FROM " . self::NOMBRE_TABLA . " WHERE " . self::ID . "=?";
+            $consulta = "DELETE FROM " . self::NOMBRE_TABLA . " WHERE " . self::CLAVE . "=?";
             $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($consulta);
-            $sentencia->bindParam(1, $id, PDO::PARAM_INT);
+            $sentencia->bindParam(1, $clave, PDO::PARAM_INT);
             $sentencia->execute();
             return $sentencia->rowCount() > 0;
         } catch (PDOException $e) {
@@ -304,5 +321,4 @@ class NivelesCarrera
         }
     }
 }
-
 ?>

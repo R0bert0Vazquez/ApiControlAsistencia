@@ -1,6 +1,8 @@
 <?php
 require_once './controladores/Alumno.php';
 require_once './controladores/NivelesCarrera.php';
+require_once './controladores/Carrera.php';
+require_once './controladores/Incidencia.php';
 require_once './controladores/Horario.php';
 require_once './controladores/Asistencia.php';
 require_once './controladores/TipoIncidencia.php';
@@ -8,6 +10,18 @@ require_once './controladores/TipoIncidencia.php';
 require_once './vistas/VistaJson.php';
 require_once './vistas/VistaXML.php';
 require_once './utilidades/ExcepcionApi.php';
+
+// Configuración de CORS
+header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+header("Access-Control-Allow-Credentials: true");
+
+// Manejar preflight request
+if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
+    http_response_code(200);
+    exit();
+}
 
 // Constantes de estado
 const ESTADO_URL_INCORRECTA = 2;
@@ -52,6 +66,8 @@ if (isset($_GET['PATH_INFO'])) {
     $recursos_existentes = array(
         'alumno',
         'nivelesCarrera',
+        'carrera',
+        'incidencia',
         'horario', 
         'asistencia',
         'tipoIncidencia'

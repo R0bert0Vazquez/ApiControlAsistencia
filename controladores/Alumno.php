@@ -22,14 +22,14 @@ class Alumno
     const ESTADO_PARAMETROS_INCORRECTOS = 7;
     const ESTADO_CLAVE_NO_AUTORIZADA = 8;
     const ESTADO_AUSENCIA_CLAVE_API = 9;
+    const ESTADO_EXITO = 2;
 
 
-
-    public static function post($peticion)
+    public static function post($parameters)
     {
-        if ($peticion[0] == 'registro') {
+        if ($parameters[0] == 'registro') {
             return self::registrarAlumno();
-        } else if ($peticion[0] == 'login') {
+        } else if ($parameters[0] == 'login') {
             return self::loguearAlumno();
         } else {
             throw new ExcepcionApi(self::ESTADO_URL_INCORRECTA, "Url mal formada", 400);
@@ -248,6 +248,252 @@ class Alumno
             return $resultado['id'];
         } else {
             return null;
+        }
+    }
+
+    //Peticion GET
+    public static function get($parameters)
+    {
+        $idAlumno = Alumno::autorizar();
+
+        if (isset($idAlumno)) {
+            $parameters = array_filter($parameters, function ($value) {
+                return $value !== '';
+            });
+
+            if (empty($parameters)) {
+                return self::getAll();
+            } else if (count($parameters) == 1) {
+                return self::getId($parameters[0]);
+            } else if (count($parameters) == 2) {
+                return self::getMany($parameters[0], $parameters[1]);
+            } else {
+                throw new ExcepcionApi(self::ESTADO_URL_INCORRECTA, "URL incorrecta! ");
+            }
+        } else {
+            throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave API");
+        }
+    }
+
+    private static function getAll()
+    {
+        try {
+            $comando = "SELECT id, nombreCompleto, numeroControl, carreraId, semestre FROM " . self::NOMBRE_TABLA;
+            $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
+
+            if ($sentencia->execute()) {
+                http_response_code(200);
+                return [
+                    "estado" => self::ESTADO_EXITO,
+                    "alumnos" => $sentencia->fetchAll(PDO::FETCH_ASSOC)
+                ];
+            } else {
+                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener los Alumnos");
+            }
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage(), 500);
+        }
+    }
+
+    private static function getId($id)
+    {
+        try {
+            $comando = "SELECT id, nombreCompleto, numeroControl, carreraId, semestre FROM " . self::NOMBRE_TABLA . " WHERE " . self::ID . "=?";
+            $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
+            $sentencia->bindParam(1, $id, PDO::PARAM_INT);
+
+            if ($sentencia->execute()) {
+                $resultado = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+
+                if (empty($resultado)) {
+                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe un alumno con el ID especificado");
+                }
+
+                http_response_code(200);
+                return [
+                    "estado" => self::ESTADO_EXITO,
+                    "alumno" => $resultado
+                ];
+            } else {
+                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener el Alumno");
+            }
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage(), 500);
+        }
+    }
+
+    private static function getMany($idIni, $idFin)
+    {
+        try {
+            $comando = "SELECT id, nombreCompleto, numeroControl, carreraId, semestre FROM "
+                . self::NOMBRE_TABLA . " WHERE "
+                . self::ID . " BETWEEN ? AND ?";
+            $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
+            $sentencia->bindParam(1, $idIni, PDO::PARAM_INT);
+            $sentencia->bindParam(2, $idFin, PDO::PARAM_INT);
+
+            if ($sentencia->execute()) {
+                $resultado = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+
+                if (empty($resultado)) {
+                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existen alumnos en el rango de IDs especificado");
+                }
+
+                http_response_code(200);
+                return [
+                    "estado" => self::ESTADO_EXITO,
+                    "alumnos" => $resultado
+                ];
+            } else {
+                throw new ExcepcionApi(self::ESTADO_ERROR_BD, "Se ha producido un error al intentar obtener los Alumnos");
+            }
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage(), 500);
+        }
+    }
+
+    //Peticion PUT
+    public static function put($parameters)
+    {
+        $idAlumno = Alumno::autorizar();
+
+        if (isset($idAlumno)) {
+            if (empty($parameters)) {
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Se requiere el ID del alumno a actualizar");
+            }
+
+            $id = $parameters[0];
+            if (!self::existeAlumno($id)) {
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe un alumno con el ID especificado");
+            }
+
+            $cuerpo = file_get_contents('php://input');
+            $alumno = json_decode($cuerpo);
+
+            if (self::actualizarAlumno($id, $alumno)) {
+                http_response_code(200);
+                return [
+                    "estado" => self::ESTADO_EXITO,
+                    "mensaje" => "Alumno actualizado correctamente"
+                ];
+            } else {
+                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al actualizar el alumno");
+            }
+        } else {
+            throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave API");
+        }
+    }
+
+    private static function existeAlumno($id)
+    {
+        try {
+            $comando = "SELECT COUNT(*) FROM " . self::NOMBRE_TABLA . " WHERE " . self::ID . "=?";
+            $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($comando);
+            $sentencia->bindParam(1, $id, PDO::PARAM_INT);
+            $sentencia->execute();
+            return $sentencia->fetchColumn() > 0;
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
+    }
+
+    private static function actualizarAlumno($id, $datosAlumno)
+    {
+        try {
+            $campos = [];
+            $valores = [];
+            $tipos = [];
+
+            // Verificar y agregar cada campo si existe
+            if (isset($datosAlumno->nombreCompleto)) {
+                $campos[] = self::NOMBRE_COMPLETO . "=?";
+                $valores[] = $datosAlumno->nombreCompleto;
+                $tipos[] = PDO::PARAM_STR;
+            }
+            if (isset($datosAlumno->numeroControl)) {
+                $campos[] = self::NUMERO_CONTROL . "=?";
+                $valores[] = $datosAlumno->numeroControl;
+                $tipos[] = PDO::PARAM_STR;
+            }
+            if (isset($datosAlumno->contrasena)) {
+                $campos[] = self::CONTRASENA . "=?";
+                $valores[] = self::encriptarContrasena($datosAlumno->contrasena);
+                $tipos[] = PDO::PARAM_STR;
+            }
+            if (isset($datosAlumno->carreraId)) {
+                $campos[] = self::CARRERA_ID . "=?";
+                $valores[] = $datosAlumno->carreraId;
+                $tipos[] = PDO::PARAM_INT;
+            }
+            if (isset($datosAlumno->semestre)) {
+                $campos[] = self::SEMESTRE . "=?";
+                $valores[] = $datosAlumno->semestre;
+                $tipos[] = PDO::PARAM_INT;
+            }
+
+            if (empty($campos)) {
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No se proporcionaron datos para actualizar");
+            }
+
+            // Construir la consulta SQL
+            $consulta = "UPDATE " . self::NOMBRE_TABLA . " SET " . implode(", ", $campos) . " WHERE " . self::ID . "=?";
+            $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($consulta);
+
+            // Vincular los valores dinámicamente
+            foreach ($valores as $i => $valor) {
+                $sentencia->bindParam($i + 1, $valores[$i], $tipos[$i]);
+            }
+            // Vincular el ID al último parámetro
+            $sentencia->bindParam(count($valores) + 1, $id, PDO::PARAM_INT);
+
+            // Ejecutar y verificar si se realizó la actualización
+            $sentencia->execute();
+            return $sentencia->rowCount() > 0;
+
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
+    }
+
+    //Peticion DELETE
+    public static function delete($parameters)
+    {
+        $idAlumno = Alumno::autorizar();
+
+        if (isset($idAlumno)) {
+            if (empty($parameters)) {
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Se requiere el ID del alumno a eliminar");
+            }
+
+            $id = $parameters[0];
+            if (!self::existeAlumno($id)) {
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No existe un alumno con el ID especificado");
+            }
+
+            if (self::eliminarAlumno($id)) {
+                http_response_code(200);
+                return [
+                    "estado" => self::ESTADO_EXITO,
+                    "mensaje" => "Alumno eliminado correctamente"
+                ];
+            } else {
+                throw new ExcepcionApi(self::ESTADO_CREACION_FALLIDA, "Error al actualizar el alumno");
+            }
+        } else {
+            throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave API");
+        }
+    }
+
+    private static function eliminarAlumno($id)
+    {
+        try {
+            $consulta = "DELETE FROM " . self::NOMBRE_TABLA . " WHERE " . self::ID . "=?";
+            $sentencia = ConexionBD::obtenerInstancia()->obtenerBD()->prepare($consulta);
+            $sentencia->bindParam(1, $id, PDO::PARAM_INT);
+            $sentencia->execute();
+            return $sentencia->rowCount() > 0;
+        } catch (PDOException $e) {
+            throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
         }
     }
 }
