@@ -3,7 +3,9 @@ require_once './controladores/Alumno.php';
 require_once './controladores/NivelesCarrera.php';
 require_once './controladores/Carrera.php';
 require_once './controladores/Incidencia.php';
-
+require_once './controladores/Horario.php';
+require_once './controladores/Asistencia.php';
+require_once './controladores/TipoIncidencia.php';
 
 require_once './vistas/VistaJson.php';
 require_once './vistas/VistaXML.php';
@@ -65,7 +67,10 @@ if (isset($_GET['PATH_INFO'])) {
         'alumno',
         'nivelesCarrera',
         'carrera',
-        'incidencia'
+        'incidencia',
+        'horario', 
+        'asistencia',
+        'tipoIncidencia'
     );
 
     // Comprobar si existe el recurso
@@ -104,6 +109,7 @@ switch ($request_method) {
     case 'delete':
         if (method_exists($nombre_clase, $request_method)) {
             $respuesta = call_user_func(array($nombre_clase, $request_method), $parameters);
+            $vista->estado = $respuesta?200:500;
             $vista->imprimir($respuesta);
             break;
         }
