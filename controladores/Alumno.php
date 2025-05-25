@@ -129,6 +129,7 @@ class Alumno
 
             if ($alumnoBD != NULL) {
                 http_response_code(200);
+                $respuesta["id"] = $alumnoBD["id"];
                 $respuesta["nombreCompleto"] = $alumnoBD["nombreCompleto"];
                 $respuesta["numeroControl"] = $alumnoBD["numeroControl"];
                 $respuesta["claveApi"] = $alumnoBD["claveApi"];
@@ -179,6 +180,7 @@ class Alumno
     private static function obtenerAlumnoPorNumeroControl($numeroControl)
     {
         $comando = "SELECT " .
+            self::ID . "," .
             self::NOMBRE_COMPLETO . "," .
             self::NUMERO_CONTROL . "," .
             self::CLAVE_API . "," .
