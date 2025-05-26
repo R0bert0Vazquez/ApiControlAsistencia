@@ -143,6 +143,13 @@ class Incidencia
         if (!isset($idAlumno)) {
             throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave Api");
         }
+
+        // Manejar la petición de reporte
+        if (count($parameters) == 1 && $parameters[0] === 'reporte') {
+            return self::reporteIncidencias();
+        }
+
+        // Lógica existente para el registro de incidencia
         if (empty($parameters) || $parameters[0] !== 'registro') {
             throw new ExcepcionApi(self::ESTADO_URL_INCORRECTA, "Url mal formada", 400);
         }
@@ -343,6 +350,28 @@ class Incidencia
             return $sentencia->rowCount() > 0;
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
+    }
+
+    private static function reporteIncidencias()
+    {
+        $idAlumno = Alumno::autorizar();
+
+        if (isset($idAlumno)) {
+            // Definir el título del reporte para incidencias
+            $titulo = "Reporte de Incidencias";
+            
+            // Configurar las cabeceras para indicar que se enviará un PDF
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="reporte_incidencias.pdf"');
+            
+            // Incluir la vista que generará el PDF. La vista leerá los datos JSON del cuerpo de la petición POST.
+            require_once './vistas/reporteJsonGenerico.php';
+            
+            return true; // Indicar éxito
+
+        } else {
+            throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave API");
         }
     }
 }

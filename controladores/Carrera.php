@@ -142,6 +142,12 @@ class Carrera
             throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave Api");
         }
 
+        // Manejar la petición de reporte
+        if (count($parameters) == 1 && $parameters[0] === 'reporte') {
+            return self::reporteCarreras();
+        }
+
+        // Lógica existente para el registro de carrera
         if (empty($parameters) || $parameters[0] !== 'registro') {
             throw new ExcepcionApi(self::ESTADO_URL_INCORRECTA, "Url mal formada", 400);
         }
@@ -318,6 +324,28 @@ class Carrera
             return $sentencia->rowCount() > 0;
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
+    }
+
+    private static function reporteCarreras()
+    {
+        $idAlumno = Alumno::autorizar();
+
+        if (isset($idAlumno)) {
+            // Definir el título del reporte para carreras
+            $titulo = "Reporte de Carreras";
+
+            // Configurar las cabeceras para indicar que se enviará un PDF
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="reporte_carreras.pdf"');
+
+            // Incluir la vista que generará el PDF. La vista leerá los datos JSON del cuerpo de la petición POST.
+            require_once './vistas/reporteJsonGenerico.php';
+
+            return true; // Indicar éxito
+
+        } else {
+            throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave API");
         }
     }
 }

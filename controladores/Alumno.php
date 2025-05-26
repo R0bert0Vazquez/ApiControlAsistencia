@@ -1,6 +1,7 @@
 <?php
 require_once "./datos/ConexionBD.php";
 
+
 class Alumno
 {
     //Datos de la tabla "alumnos"
@@ -31,6 +32,8 @@ class Alumno
             return self::registrarAlumno();
         } else if ($parameters[0] == 'login') {
             return self::loguearAlumno();
+        } else if ($parameters[0] == 'reporte') {
+            return self::reporteAlumno();
         } else {
             throw new ExcepcionApi(self::ESTADO_URL_INCORRECTA, "Url mal formada", 400);
         }
@@ -496,6 +499,28 @@ class Alumno
             return $sentencia->rowCount() > 0;
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
+    }
+
+    private static function reporteAlumno()
+    {
+        $idAlumno = Alumno::autorizar();
+
+        if (isset($idAlumno)) {
+            // Definir el título del reporte
+            $titulo = "Reporte de Alumnos";
+
+            // Configurar las cabeceras para indicar que se enviará un PDF
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="reporte_alumnos.pdf"');
+
+            // Incluir la vista que generará el PDF. La vista leerá los datos JSON del cuerpo de la petición POST.
+            require_once './vistas/reporteJsonGenerico.php';
+
+            return true; // Indicar éxito
+
+        } else {
+            throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave API");
         }
     }
 }
