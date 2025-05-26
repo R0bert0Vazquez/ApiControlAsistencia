@@ -81,10 +81,20 @@ class horario
     public static function post($peticion = null) {
         $idAlumno = Alumno::autorizar();
         if($idAlumno){
+            // Manejar la petición de reporte
+            if ($peticion !== null && count($peticion) == 1 && $peticion[0] === 'reporte') {
+                return self::reporteHorarios();
+            }
+
+            // Lógica existente para la creación de horario
             if($peticion){
-                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No requiere", 400);
+                throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "No requiere parametros para la creación de horario", 400);
             }else{
                 $body = json_decode(file_get_contents('php://input'));
+                 // Validar que se reciban los datos necesarios para crear horario
+                 if (empty($body->diaSemana) || empty($body->entrada1) || empty($body->salida1) || empty($body->entrada2) || empty($body->salida2)) {
+                    throw new ExcepcionApi(self::ESTADO_PARAMETROS_INCORRECTOS, "Faltan datos para crear el horario", 400);
+                }
                 return ['estado'=>self::crearHorario($idAlumno,$body),'mensaje'=>"Horario Ingresado con Exito"];
             }
         }
@@ -192,6 +202,28 @@ class horario
                 return $sentencia->execute()?['estado'=>self::ESTADO_CREACION_EXITOSA,'mensaje'=>"Realizado Correctamente"]:['estado'=>self::ESTADO_ERROR_BD,'mensaje'=>"Error Intentelo de Nuevo"];
         } catch (PDOException $e) {
             throw new ExcepcionApi(self::ESTADO_ERROR_BD, $e->getMessage());
+        }
+    }
+
+    private static function reporteHorarios()
+    {
+        $idAlumno = Alumno::autorizar();
+
+        if (isset($idAlumno)) {
+            // Definir el título del reporte para horarios
+            $titulo = "Reporte de Horarios";
+            
+            // Configurar las cabeceras para indicar que se enviará un PDF
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="reporte_horarios.pdf"');
+            
+            // Incluir la vista que generará el PDF. La vista leerá los datos JSON del cuerpo de la petición POST.
+            require_once './vistas/reporteJsonGenerico.php';
+            
+            return true; // Indicar éxito
+
+        } else {
+            throw new ExcepcionApi(self::ESTADO_AUSENCIA_CLAVE_API, "Falta la clave API");
         }
     }
 }
