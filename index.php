@@ -1,4 +1,12 @@
 <?php
+// Configuración de sesión
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.cookie_secure', 0); // Cambiar a 1 en producción con HTTPS
+    session_start();
+}
+
 require_once './controladores/Alumno.php';
 require_once './controladores/NivelesCarrera.php';
 require_once './controladores/Carrera.php';
@@ -6,6 +14,8 @@ require_once './controladores/Incidencia.php';
 require_once './controladores/Horario.php';
 require_once './controladores/Asistencia.php';
 require_once './controladores/TipoIncidencia.php';
+require_once './controladores/Ftp.php';
+
 
 require_once './vistas/VistaJson.php';
 require_once './vistas/VistaXML.php';
@@ -13,9 +23,9 @@ require_once './utilidades/ExcepcionApi.php';
 
 // Configuración de CORS
 header("Access-Control-Allow-Origin: http://localhost:5173");
+header("Access-Control-Allow-Credentials: true");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-header("Access-Control-Allow-Credentials: true");
 
 // Manejar preflight request
 if ($_SERVER['REQUEST_METHOD'] == "OPTIONS") {
@@ -70,7 +80,8 @@ if (isset($_GET['PATH_INFO'])) {
         'incidencia',
         'horario', 
         'asistencia',
-        'tipoIncidencia'
+        'tipoIncidencia',
+        'ftp'
     );
 
     // Comprobar si existe el recurso

@@ -7,38 +7,42 @@ require('./vistas/fpdf186/fpdf.php');
 // Verificar si la variable $titulo está definida en el ámbito global
 $tituloReporte = isset($titulo) ? $titulo : 'Reporte';
 
-class PDF extends FPDF {
+class PDF extends FPDF
+{
     // Propiedad para almacenar el título
     protected $reportTitle;
 
     // Método para establecer el título
-    function setReportTitle($title) {
+    function setReportTitle($title)
+    {
         $this->reportTitle = $title;
     }
 
     // Cabecera de página
-    function Header() {
+    function Header()
+    {
         // Logo (opcional)
         // $this->Image('logo.png',10,8,33);
-        
+
         // Arial bold 15
-        $this->SetFont('Arial','B',15);
-        
+        $this->SetFont('Arial', 'B', 15);
+
         // Título
-        $this->Cell(0,10,$this->reportTitle,0,1,'C');
-        
+        $this->Cell(0, 10, $this->reportTitle, 0, 1, 'C');
+
         // Salto de línea
         $this->Ln(10);
     }
-    
+
     // Pie de página
-    function Footer() {
+    function Footer()
+    {
         // Posición: a 1.5 cm del final
         $this->SetY(-15);
         // Arial italic 8
-        $this->SetFont('Arial','I',8);
+        $this->SetFont('Arial', 'I', 8);
         // Número de página
-        $this->Cell(0,10,'Página '.$this->PageNo().'/{nb}',0,0,'C');
+        $this->Cell(0, 10, 'Página ' . $this->PageNo() . '/{nb}', 0, 0, 'C');
     }
 }
 
@@ -53,7 +57,8 @@ $pdf->SetAutoPageBreak(true, 20);
 $pdf->SetFont('Arial', '', 10);
 
 // Función para obtener el ancho máximo de cada columna
-function getColumnWidths($data, $headers) {
+function getColumnWidths($data, $headers)
+{
     $widths = array();
     foreach ($headers as $header) {
         $maxWidth = strlen($header);
@@ -69,7 +74,8 @@ function getColumnWidths($data, $headers) {
 }
 
 // Función para dibujar la tabla
-function drawTable($pdf, $data, $headers, $widths) {
+function drawTable($pdf, $data, $headers, $widths)
+{
     // Colores, línea y fuente
     $pdf->SetFillColor(232, 232, 232);
     $pdf->SetTextColor(0);
@@ -87,7 +93,7 @@ function drawTable($pdf, $data, $headers, $widths) {
 
     // Restaurar fuente para los datos
     $pdf->SetFont('Arial', '', 10);
-    
+
     // Datos
     $fill = false;
     foreach ($data as $row) {
@@ -97,10 +103,10 @@ function drawTable($pdf, $data, $headers, $widths) {
 
         // Calcular la altura máxima de la fila
         foreach ($headers as $header) {
-            $value = isset($row->$header) ? (string)$row->$header : '';
+            $value = isset($row->$header) ? (string) $row->$header : '';
             $value_latin1 = utf8_decode($value);
             $cellWidth = $widths[$header];
-            
+
             // Usar un método de FPDF para estimar la altura requerida por MultiCell
             // Clonar FPDF o usar un enfoque similar no es práctico aquí.
             // Estimaremos usando GetStringWidth y una altura de línea fija.
@@ -109,24 +115,24 @@ function drawTable($pdf, $data, $headers, $widths) {
             $cellHeight = $lines * 5; // Altura de línea estimada (5 unidades)
             $maxHeight = max($maxHeight, $cellHeight);
         }
-        
+
         // Asegurar una altura mínima para la fila
         $rowHeight = $maxHeight > 5 ? $maxHeight : 5;
 
         // Dibujar celdas usando MultiCell
         $pdf->SetXY($startX, $startY); // Restablecer posición al inicio de la fila
         foreach ($headers as $header) {
-            $value = isset($row->$header) ? (string)$row->$header : '';
+            $value = isset($row->$header) ? (string) $row->$header : '';
             $value_latin1 = utf8_decode($value);
             $cellWidth = $widths[$header];
 
             // Dibujar la celda con MultiCell
             $pdf->MultiCell($cellWidth, 5, $value_latin1, 1, 'L', $fill, 0, '', '', true, 0, false, true, $rowHeight, 'M');
-            
+
             // Mover a la posición X para la siguiente celda (GetX() después de MultiCell está al final del texto)
             // Necesitamos calcular la posición X de la siguiente celda manualmente
-             $startX += $cellWidth;
-             $pdf->SetXY($startX, $startY);
+            $startX += $cellWidth;
+            $pdf->SetXY($startX, $startY);
         }
 
         // Mover a la siguiente línea después de dibujar todas las celdas de la fila
@@ -143,10 +149,10 @@ $data = json_decode($jsonData);
 if ($data && is_array($data) && count($data) > 0) {
     // Obtener los encabezados del primer objeto
     $headers = array_keys(get_object_vars($data[0]));
-    
+
     // Calcular anchos de columna
     $widths = getColumnWidths($data, $headers);
-    
+
     // Dibujar la tabla
     drawTable($pdf, $data, $headers, $widths);
 } else {
@@ -155,4 +161,4 @@ if ($data && is_array($data) && count($data) > 0) {
 
 // Enviar el PDF
 $pdf->Output();
-?> 
+?>
