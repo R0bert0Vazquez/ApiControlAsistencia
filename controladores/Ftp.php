@@ -75,7 +75,7 @@ class Ftp
     {
         $archivos = [];
         $listaArchivos = ftp_nlist($this->conn, ".");
-        
+
         if ($listaArchivos === false) {
             throw new Exception("Error al listar archivos del servidor FTP");
         }
@@ -110,7 +110,7 @@ class Ftp
             }
 
             $ftp = new self($ftpConfig['server'], $ftpConfig['username'], $ftpConfig['password'], $ftpConfig['port']);
-            
+
             if (!$ftp->conectar()) {
                 throw new ExcepcionApi(self::ESTADO_FALLA_DESCONOCIDO, "Error al conectar con el servidor FTP");
             }
@@ -119,7 +119,7 @@ class Ftp
             if (!empty($parameters)) {
                 $nombreArchivo = $parameters[0];
                 $tempFile = tempnam(sys_get_temp_dir(), 'ftp_');
-                
+
                 if (!ftp_get($ftp->getConn(), $tempFile, $nombreArchivo, FTP_BINARY)) {
                     unlink($tempFile);
                     throw new Exception("Error al descargar el archivo");
@@ -129,7 +129,11 @@ class Ftp
                 $contenido = file_get_contents($tempFile);
                 unlink($tempFile);
 
-                // Enviar el archivo como respuesta
+                // Configurar headers CORS y de descarga
+                header("Access-Control-Allow-Origin: http://localhost:5173");
+                header("Access-Control-Allow-Credentials: true");
+                header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+                header("Access-Control-Allow-Headers: Content-Type, Authorization");
                 header('Content-Type: application/octet-stream');
                 header('Content-Disposition: attachment; filename="' . $nombreArchivo . '"');
                 header('Content-Length: ' . strlen($contenido));
@@ -203,7 +207,7 @@ class Ftp
                 }
 
                 $ftp = new self($ftpConfig['server'], $ftpConfig['username'], $ftpConfig['password'], $ftpConfig['port']);
-                
+
                 if (!$ftp->conectar()) {
                     throw new ExcepcionApi(self::ESTADO_FALLA_DESCONOCIDO, "Error al conectar con el servidor FTP");
                 }
@@ -275,7 +279,7 @@ class Ftp
             }
 
             $ftp = new self($ftpConfig['server'], $ftpConfig['username'], $ftpConfig['password'], $ftpConfig['port']);
-            
+
             if (!$ftp->conectar()) {
                 throw new ExcepcionApi(self::ESTADO_FALLA_DESCONOCIDO, "Error al conectar con el servidor FTP");
             }

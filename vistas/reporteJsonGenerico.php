@@ -160,5 +160,5 @@ if ($data && is_array($data) && count($data) > 0) {
 }
 
 // Enviar el PDF
-$pdf->Output();
+    $pdf->Output();
 ?>
